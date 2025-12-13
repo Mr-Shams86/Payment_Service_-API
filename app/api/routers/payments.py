@@ -1,0 +1,63 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import get_db
+from app.schemas.payment import PaymentCreate, PaymentRead
+from app.services.payments import create_payment, get_payment, change_status
+from app.models.payment import PaymentStatus
+
+
+router = APIRouter(prefix="/payments", tags=["payments"])
+
+
+@router.post("/", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
+async def create_payment_endpoint(
+    payload: PaymentCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    payment = await create_payment(payload, db)
+    return payment
+
+
+@router.get("/{payment_id}", response_model=PaymentRead)
+async def get_payment_endpoint(
+    payment_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    payment = await get_payment(payment_id, db)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return payment
+
+
+@router.post("/{payment_id}/confirm", response_model=PaymentRead)
+async def confirm_payment_endpoint(
+    payment_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    payment = await change_status(payment_id, PaymentStatus.CONFIRMED, db)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return payment
+
+
+@router.post("/{payment_id}/fail", response_model=PaymentRead)
+async def fail_payment_endpoint(
+    payment_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    payment = await change_status(payment_id, PaymentStatus.FAILED, db)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return payment
+
+
+@router.post("/{payment_id}/refund", response_model=PaymentRead)
+async def refund_payment_endpoint(
+    payment_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    payment = await change_status(payment_id, PaymentStatus.REFUNDED, db)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return payment

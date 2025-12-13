@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  payment_postgres:
+    image: postgres:15
+    container_name: payment_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - payment_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  payment_api:
+    build: .
+    container_name: payment_api
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      payment_postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+volumes:
+  payment_pgdata:
