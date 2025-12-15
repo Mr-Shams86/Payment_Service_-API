@@ -6,14 +6,19 @@ from app.models.payment import Payment, PaymentStatus
 from app.schemas.payment import PaymentCreate
 
 
-async def create_payment(data: PaymentCreate, idempotency_key: str, db: AsyncSession) -> Payment:
+async def create_payment(
+    data: PaymentCreate,
+    idempotency_key: str,
+    db: AsyncSession,
+) -> tuple[Payment, bool]:
+
     result = await db.execute(
         select(Payment).where(Payment.idempotency_key == idempotency_key)
     )
     existing = result.scalar_one_or_none()
     if existing:
-        return existing
-    
+        return existing, False
+
     payment = Payment(
         order_id=data.order_id,
         amount=data.amount,
@@ -21,7 +26,7 @@ async def create_payment(data: PaymentCreate, idempotency_key: str, db: AsyncSes
         idempotency_key=idempotency_key,
     )
     db.add(payment)
-    
+
     try:
         await db.commit()
     except IntegrityError:
@@ -29,10 +34,10 @@ async def create_payment(data: PaymentCreate, idempotency_key: str, db: AsyncSes
         result = await db.execute(
             select(Payment).where(Payment.idempotency_key == idempotency_key)
         )
-        return result.scalar_one()
-    
+        return result.scalar_one(), False
+
     await db.refresh(payment)
-    return payment
+    return payment, True
 
 
 async def get_payment(payment_id: int, db: AsyncSession) -> Payment | None:

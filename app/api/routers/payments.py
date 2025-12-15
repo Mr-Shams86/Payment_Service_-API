@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
@@ -10,13 +10,17 @@ from app.models.payment import PaymentStatus
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 
-@router.post("/", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=PaymentRead)
 async def create_payment_endpoint(
     payload: PaymentCreate,
     db: AsyncSession = Depends(get_db),
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    response: Response = None,
 ):
-    return await create_payment(payload, idempotency_key, db)
+    payment, created = await create_payment(payload, idempotency_key, db)
+    if response is not None:
+        response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return payment
 
 
 @router.get("/{payment_id}", response_model=PaymentRead)
