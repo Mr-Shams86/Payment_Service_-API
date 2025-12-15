@@ -1,18 +1,36 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 
 from app.models.payment import Payment, PaymentStatus
 from app.schemas.payment import PaymentCreate
 
 
-async def create_payment(data: PaymentCreate, db: AsyncSession) -> Payment:
+async def create_payment(data: PaymentCreate, idempotency_key: str, db: AsyncSession) -> Payment:
+    result = await db.execute(
+        select(Payment).where(Payment.idempotency_key == idempotency_key)
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        return existing
+    
     payment = Payment(
         order_id=data.order_id,
         amount=data.amount,
         currency=data.currency,
+        idempotency_key=idempotency_key,
     )
     db.add(payment)
-    await db.commit()
+    
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(
+            select(Payment).where(Payment.idempotency_key == idempotency_key)
+        )
+        return result.scalar_one()
+    
     await db.refresh(payment)
     return payment
 
