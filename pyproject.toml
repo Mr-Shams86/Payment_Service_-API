@@ -1,0 +1,29 @@
+[project]
+name = "payment-service-api"
+version = "0.1.0"
+description = "Payment Service API with PostgreSQL-backed idempotency guarantees"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Samer", email = "your@email.com" }
+]
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy>=2.0",
+    "asyncpg",
+    "alembic",
+    "pydantic",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
