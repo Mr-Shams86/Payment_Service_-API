@@ -2,6 +2,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"
+    )  # type: ignore env_file = ".env"
+        
     PROJECT_NAME: str = "Payment Service API"
     API_V1_PREFIX: str = "/api/v1"
 
@@ -17,9 +22,6 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}"
             f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
-
-    class Config:
-        env_file = ".env"
 
 
 @lru_cache
