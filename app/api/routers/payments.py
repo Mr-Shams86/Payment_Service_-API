@@ -1,25 +1,48 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header, status, Response
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    Header,
+    Response,
+)
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.schemas.payment import PaymentCreate, PaymentRead
-from app.services.payments import create_payment, get_payment, change_status
+from app.services.payments import (
+    create_payment,
+    get_payment,
+    change_status,
+    IdempotencyConflictError
+)
 from app.models.payment import PaymentStatus
 
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 
-@router.post("/", response_model=PaymentRead)
+@router.post("/", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
 async def create_payment_endpoint(
     payload: PaymentCreate,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
-    response: Response = None,
 ):
-    payment, created = await create_payment(payload, idempotency_key, db)
-    if response is not None:
-        response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    try:
+        payment, created = await create_payment(payload, idempotency_key, db)
+    except IdempotencyConflictError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Idempotency key reused with different payload",
+        )
+
+    if not created:
+        response.status_code = status.HTTP_200_OK
+
     return payment
 
 
