@@ -80,13 +80,23 @@ Invalid transitions are rejected to keep data consistent and predictable.
 │   └── services
 │       ├── __init__.py
 │       └── payments.py
+├── commands.txt
 ├── docker-compose.yml
 ├── Dockerfile
 ├── Makefile
 ├── pyproject.toml
 ├── README.md
 ├── requirements.txt
-└── structure.txt
+├── structure.txt
+└── test
+    ├── conftest.py
+    ├──  __init__.py
+    ├── test_health.py
+    ├── test_idempotency.py
+    ├── test_payments_flow.py
+    ├── test_payments.py
+    └── utils.py
+
 
 ```
 
@@ -210,7 +220,13 @@ It can be easily integrated with an **Order Service** or extended with real paym
 ## 👤 Author
 
 **๛Samer Shams๖**
-Backend Developer (Python / FastAPI)
+- Backend Developer (Python / FastAPI)
+
+## 📢 **Contacts**
+
+- **Email**: sammertime763@gmail.com
+
+- **Telegram**: [Mr_Shams_1986](https://t.me/Mr_Shams_1986)
 
 ---
 

@@ -14,12 +14,16 @@ RUN apt-get update && apt-get install -y \
 
 # Сначала зависимости — для кэша
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY dev-requirements.txt ./dev-requirements.txt
+
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -r dev-requirements.txt
 
 # Копируем код
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+COPY test ./test
 
 
 COPY pyproject.toml ./pyproject.toml
