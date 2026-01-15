@@ -184,6 +184,44 @@ Idempotency behavior and state changes are verified via logs and database state.
 
 ---
 
+## 🔁 Idempotency
+
+Payment creation supports idempotent requests via the `Idempotency-Key` header.
+
+Rules:
+- Repeating the same request with the same key returns the existing payment (`200 OK`)
+- Reusing the same key with different payload returns `409 Conflict`
+- Guarantees safe retries in distributed systems
+
+---
+
+## ⚠️ Error Handling
+
+The API uses standard HTTP status codes:
+
+- `400 / 409` — invalid state transitions
+- `404` — payment not found
+- `409` — idempotency conflict
+- `422` — validation errors
+
+All errors return a structured JSON response.
+
+---
+
+## 🧪 Test Coverage
+
+The project includes full async test coverage:
+
+- Payment creation & retrieval
+- Idempotency scenarios
+- Valid and invalid state transitions
+- Refund / confirm / fail flows
+- Non-existent resource handling
+
+Tests are implemented using `pytest` and `httpx.AsyncClient`.
+
+---
+
 ## 🐳 Running with Docker
 
 ```bash
