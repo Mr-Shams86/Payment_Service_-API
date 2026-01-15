@@ -1,11 +1,11 @@
 import pytest
 
-from utils import create_payment
+from test.utils import create_payment
 
 
 @pytest.mark.asyncio
 async def test_create_payment_returns_201(client):
-    r, _ = await create_payment(client, order_id=10001, amount=10.0)
+    r, _, _ = await create_payment(client, order_id=10001, amount=10.0)
     assert r.status_code == 201
 
     body = r.json()
@@ -20,7 +20,7 @@ async def test_create_payment_returns_201(client):
 
 @pytest.mark.asyncio
 async def test_get_payment_by_id(client):
-    r, _ = await create_payment(client, order_id=10002, amount=20.0)
+    r, _, _ = await create_payment(client, order_id=10002, amount=20.0)
     pid = r.json()["id"]
 
     r2 = await client.get(f"/api/v1/payments/{pid}")

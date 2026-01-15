@@ -23,4 +23,6 @@ async def create_payment(
             "amount": amount,
             "currency": currency},
     )
-    return r, key
+    payment = r.json() if r.headers.get("content-type", "").startswith(
+        "application/json") else None
+    return r, payment, key

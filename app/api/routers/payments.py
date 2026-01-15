@@ -16,7 +16,8 @@ from app.services.payments import (
     create_payment,
     get_payment,
     change_status,
-    IdempotencyConflictError
+    IdempotencyConflictError,
+    InvalidStatusTransitionError,
 )
 from app.models.payment import PaymentStatus
 
@@ -24,7 +25,10 @@ from app.models.payment import PaymentStatus
 router = APIRouter(prefix="/payments", tags=["payments"])
 
 
-@router.post("/", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=PaymentRead,
+    status_code=status.HTTP_201_CREATED
+    )
 async def create_payment_endpoint(
     payload: PaymentCreate,
     response: Response,
@@ -53,7 +57,9 @@ async def get_payment_endpoint(
 ):
     payment = await get_payment(payment_id, db)
     if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail="Payment not found")
     return payment
 
 
@@ -62,9 +68,18 @@ async def confirm_payment_endpoint(
     payment_id: int,
     db: AsyncSession = Depends(get_db),
 ):
-    payment = await change_status(payment_id, PaymentStatus.CONFIRMED, db)
+    try:
+        payment = await change_status(payment_id, PaymentStatus.CONFIRMED, db)
+    except InvalidStatusTransitionError:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Invalid status transition")
+
     if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail="Payment not found")
+
     return payment
 
 
@@ -73,9 +88,18 @@ async def fail_payment_endpoint(
     payment_id: int,
     db: AsyncSession = Depends(get_db),
 ):
-    payment = await change_status(payment_id, PaymentStatus.FAILED, db)
+    try:
+        payment = await change_status(payment_id, PaymentStatus.FAILED, db)
+    except InvalidStatusTransitionError:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Invalid status transition")
+
     if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail="Payment not found")
+
     return payment
 
 
@@ -84,7 +108,16 @@ async def refund_payment_endpoint(
     payment_id: int,
     db: AsyncSession = Depends(get_db),
 ):
-    payment = await change_status(payment_id, PaymentStatus.REFUNDED, db)
+    try:
+        payment = await change_status(payment_id, PaymentStatus.REFUNDED, db)
+    except InvalidStatusTransitionError:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="Invalid status transition")
+
     if not payment:
-        raise HTTPException(status_code=404, detail="Payment not found")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail="Payment not found")
+
     return payment

@@ -10,6 +10,19 @@ class IdempotencyConflictError(Exception):
     pass
 
 
+class InvalidStatusTransitionError(Exception):
+    """Когда пытаются сделать запрещённый переход статуса."""
+    pass
+
+
+ALLOWED_TRANSITIONS: dict[PaymentStatus, set[PaymentStatus]] = {
+    PaymentStatus.PENDING: {PaymentStatus.CONFIRMED, PaymentStatus.FAILED},
+    PaymentStatus.CONFIRMED: {PaymentStatus.CONFIRMED, PaymentStatus.REFUNDED},
+    PaymentStatus.FAILED: set(),
+    PaymentStatus.REFUNDED: set(),
+}
+
+
 async def create_payment(
     data: PaymentCreate,
     idempotency_key: str,
@@ -82,6 +95,19 @@ async def change_status(
 
     if not payment:
         return None
+
+    old_status = payment.status
+    if isinstance(old_status, str):
+        old_status = PaymentStatus(old_status)
+
+    if isinstance(new_status, str):
+        new_status = PaymentStatus(new_status)
+
+    allowed = ALLOWED_TRANSITIONS.get(old_status, set())
+
+    if new_status not in allowed:
+        raise InvalidStatusTransitionError(
+            f"{old_status} -> {new_status} is not allowed")
 
     payment.status = new_status
     await db.commit()

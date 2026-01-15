@@ -1,12 +1,12 @@
 import pytest
 
-from utils import create_payment, new_key
+from test.utils import create_payment, new_key
 
 
 @pytest.mark.asyncio
 async def test_idempotency_same_key_same_payload_returns_same_payment(client):
     key = new_key("idem")
-    r1, _ = await create_payment(
+    r1, payment1, _ = await create_payment(
         client,
         order_id=20001,
         amount=10.0, key=key)
@@ -31,7 +31,7 @@ async def test_idempotency_same_key_same_payload_returns_same_payment(client):
 @pytest.mark.asyncio
 async def test_idempotency_same_key_different_payload_returns_409(client):
     key = new_key("idem")
-    r1, _ = await create_payment(
+    r1, payment1, _ = await create_payment(
         client,
         order_id=20002,
         amount=10.0,
