@@ -137,7 +137,7 @@ Idempotency-Key: unique-key
 **Response**
 
 * `201 Created` — new payment created
-* `200 OK` — idempotent повтор запроса
+* `200 OK` — idempotent request retry
 
 ---
 
@@ -173,6 +173,157 @@ POST /api/v1/payments/{payment_id}/refund
 
 ---
 
+## 🔄 Example API Flows
+
+This section demonstrates typical real-world usage scenarios of the Payment Service API.
+
+### 🟢 Flow 1: Successful Payment
+
+1. Create a payment
+
+```http
+POST /api/v1/payments/
+Idempotency-Key: 123e4567-e89b-12d3-a456-426614174000
+```
+**Request body**
+```json
+{
+  "order_id": 42,
+  "amount": 99.99,
+  "currency": "USD"
+}
+```
+
+**Response — 201 Created**
+```json
+{
+  "id": 1,
+  "order_id": 42,
+  "amount": 99.99,
+  "currency": "USD",
+  "status": "pending",
+  "provider": "internal",
+  "created_at": "2026-01-16T16:57:41.614Z",
+  "updated_at": "2026-01-16T16:57:41.614Z"
+}
+```
+
+2. Confirm the payment
+
+```http
+POST /api/v1/payments/1/confirm
+```
+
+**Response — 200 OK**
+```json
+{
+  "id": 1,
+  "status": "confirmed",
+  "updated_at": "2026-01-16T16:58:10.075Z"
+}
+```
+
+✅ Payment successfully completed.
+
+### 🔁 Flow 2: Idempotent Request Retry
+
+A client retries the same payment creation request (e.g. network timeout).
+
+```http
+POST /api/v1/payments/
+Idempotency-Key: 123e4567-e89b-12d3-a456-426614174000
+```
+**Request body**
+```json
+{
+  "order_id": 42,
+  "amount": 99.99,
+  "currency": "USD"
+}
+```
+
+**Response — 200 OK**
+```json
+{
+  "id": 1,
+  "status": "pending"
+}
+```
+
+🔒 No duplicate payment created — the existing payment is safely returned.
+
+### 🔴 Flow 3: Failed Payment
+
+1. Create a payment → status pending
+
+2. Mark payment as failed
+
+```http
+POST /api/v1/payments/2/fail
+```
+
+**Response**
+```json
+{
+  "id": 2,
+  "status": "failed"
+}
+```
+
+❌ Payment failed and cannot be confirmed or refunded afterwards.
+
+### 💸 Flow 4: Refund a Confirmed Payment
+
+1. Create payment → pending
+2. Confirm payment → confirmed
+
+3. Refund payment
+
+```http
+POST /api/v1/payments/3/refund
+```
+
+**Response**
+```json
+{
+  "id": 3,
+  "status": "refunded"
+}
+```
+
+💰 Funds successfully refunded.
+
+### ⚠️ Flow 5: Invalid State Transition
+
+Attempt to refund a payment that is still pending:
+
+```http
+POST /api/v1/payments/4/refund
+```
+
+**Response — 409 Conflict**
+```json
+{
+  "detail": "Cannot refund payment in pending status"
+}
+```
+
+🚫 Business rules are strictly enforced to guarantee data consistency.
+
+🧠 Why This Matters
+
+These flows demonstrate:
+
+- Idempotent payment creation
+- Explicit state transitions
+- Predictable business rules
+- Safe retries in distributed systems
+- Clear error handling
+
+This mirrors how real payment services behave in production environments.
+
+---
+
 ## 🧪 Testing
 
 All endpoints are fully testable via:
@@ -199,9 +350,9 @@ Rules:
 
 The API uses standard HTTP status codes:
 
-- `400 / 409` — invalid state transitions
+- `400` — invalid request / business rule violation
 - `404` — payment not found
-- `409` — idempotency conflict
+- `409` — idempotency conflict or invalid state transition
 - `422` — validation errors
 
 All errors return a structured JSON response.
